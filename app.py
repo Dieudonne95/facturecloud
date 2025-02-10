@@ -12,17 +12,42 @@ load_dotenv()
 # Fonction pour se connecter à Supabase
 def create_supabase_connection():
     try:
+        # Récupérer les variables d'environnement
+        supabase_url = os.getenv("https://pqukveuzxrtoatjjvhyn.supabase.co")
+        supabase_key = os.getenv("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxdWt2ZXV6eHJ0b2F0amp2aHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkxNzc4NDYsImV4cCI6MjA1NDc1Mzg0Nn0.hdIRmqYwYxh8Lu2UnPjNDdoEijtel7NfQFN_Y8s8v3A")
+
+        # Vérifier que les variables existent
+        if not supabase_url or not supabase_key:
+            st.error("Les variables d'environnement SUPABASE_URL et SUPABASE_KEY ne sont pas définies.")
+            return None
+
+        # Extraire les composants nécessaires depuis SUPABASE_URL
+        host = supabase_url.split("@")[1].split(":")[0]
+        user = supabase_url.split("//")[1].split(":")[0]
+        password = supabase_key
+        dbname = "postgres"
+
+        # Créer la connexion
         conn = psycopg2.connect(
-    dbname="postgres",
-    user=os.getenv("https://pqukveuzxrtoatjjvhyn.supabase.co").split("//")[1].split(":")[0],
-    password=os.getenv("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxdWt2ZXV6eHJ0b2F0amp2aHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkxNzc4NDYsImV4cCI6MjA1NDc1Mzg0Nn0.hdIRmqYwYxh8Lu2UnPjNDdoEijtel7NfQFN_Y8s8v3A"),
-    host=os.getenv("https://pqukveuzxrtoatjjvhyn.supabase.co").split("@")[1].split(":")[0],
-    port=5432
+            dbname=dbname,
+            user=user,
+            password=password,
+            host=host,
+            port=5432
         )
-        return conn  # Retourne la connexion si elle réussit
+        return conn
     except Exception as e:
         st.error(f"Erreur de connexion à Supabase : {e}")
         return None
+
+# Tester la connexion
+conn = create_supabase_connection()
+if conn:
+    st.success("Connexion réussie à Supabase !")
+    conn.close()
+else:
+    st.error("Échec de la connexion à Supabase. Vérifiez vos paramètres.")
+
 
 # Classe pour créer un PDF
 class FacturePDF(FPDF):
