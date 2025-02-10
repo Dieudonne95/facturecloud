@@ -1,6 +1,6 @@
-streamlit 
-pandas 
-psycopg2
-matplotlib
-pyplot
-fpdf 
+streamlit==1.25.0 
+pandas==2.0.3    
+psycopg2-binary==2.9.6 
+fpdf==1.7.2       
+plotly==5.14.0    
+python-dotenv==1.0.0
