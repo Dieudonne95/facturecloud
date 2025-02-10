@@ -3,4 +3,4 @@ pandas
 psycopg2
 fpdf   
 plotly
-python-dotenv
+dotenv
