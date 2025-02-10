@@ -1,7 +1,6 @@
-streamlit
-pandas
-matplotlib
-psycopg2
-fpdf   
-plotly
-dotenv
+streamlit 
+pandas 
+psycopg2-binary 
+fpdf 
+plotly 
+python-dotenv
