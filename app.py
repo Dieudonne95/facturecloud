@@ -13,11 +13,11 @@ load_dotenv()
 def create_supabase_connection():
     try:
         conn = psycopg2.connect(
-            dbname="postgres",
-            user=os.getenv("https://pqukveuzxrtoatjjvhyn.supabase.co"),
-            password=os.getenv("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxdWt2ZXV6eHJ0b2F0amp2aHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkxNzc4NDYsImV4cCI6MjA1NDc1Mzg0Nn0.hdIRmqYwYxh8Lu2UnPjNDdoEijtel7NfQFN_Y8s8v3A"),
-            host=os.getenv("https://pqukveuzxrtoatjjvhyn.supabase.co"),
-            port=5432
+    dbname="postgres",
+    user=os.getenv("https://pqukveuzxrtoatjjvhyn.supabase.co").split("//")[1].split(":")[0],
+    password=os.getenv("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxdWt2ZXV6eHJ0b2F0amp2aHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkxNzc4NDYsImV4cCI6MjA1NDc1Mzg0Nn0.hdIRmqYwYxh8Lu2UnPjNDdoEijtel7NfQFN_Y8s8v3A"),
+    host=os.getenv("https://pqukveuzxrtoatjjvhyn.supabase.co").split("@")[1].split(":")[0],
+    port=5432
         )
         return conn  # Retourne la connexion si elle réussit
     except Exception as e:
