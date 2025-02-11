@@ -2,53 +2,58 @@ import streamlit as st
 import pandas as pd
 import psycopg2
 import matplotlib.pyplot as plt
-import plotly.express as px 
+import plotly.express as px
 import os
 from fpdf import FPDF
 import base64
 from dotenv import load_dotenv
+
+# Charger les variables d'environnement depuis le fichier .env
 load_dotenv()
 
-# Fonction pour se connecter à Supabase
 def create_supabase_connection():
     try:
         # Récupérer les variables d'environnement
-        supabase_url = os.getenv("https://pqukveuzxrtoatjjvhyn.supabase.co")
-        supabase_key = os.getenv("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxdWt2ZXV6eHJ0b2F0amp2aHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkxNzc4NDYsImV4cCI6MjA1NDc1Mzg0Nn0.hdIRmqYwYxh8Lu2UnPjNDdoEijtel7NfQFN_Y8s8v3A")
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
 
         # Vérifier que les variables existent
         if not supabase_url or not supabase_key:
             st.error("Les variables d'environnement SUPABASE_URL et SUPABASE_KEY ne sont pas définies.")
             return None
 
-        # Extraire les composants nécessaires depuis SUPABASE_URL
-        host = supabase_url.split("@")[1].split(":")[0]
-        user = supabase_url.split("//")[1].split(":")[0]
-        password = supabase_key
-        dbname = "postgres"
+        # Vérifier le format de SUPABASE_URL
+        if not supabase_url.startswith("postgres://"):
+            st.error("Le format de SUPABASE_URL est incorrect. Assurez-vous qu'il est au format 'postgres://user:password@host:port/dbname'.")
+            return None
 
-        # Créer la connexion
-        conn = psycopg2.connect(
-            dbname=dbname,
-            user=user,
-            password=password,
-            host=host,
-            port=5432
-        )
-        return conn
+        try:
+            # Extraire les composants nécessaires depuis SUPABASE_URL
+            url_parts = supabase_url.split("@")
+            credentials = url_parts[0].replace("postgres://", "").split(":")
+            host_port_db = url_parts[1].split("/")
+
+            user = credentials[0]
+            password = credentials[1]
+            host = host_port_db[0].split(":")[0]
+            port = host_port_db[0].split(":")[1]
+            dbname = host_port_db[1]
+
+            # Créer la connexion
+            conn = psycopg2.connect(
+                dbname=dbname,
+                user=user,
+                password=password,
+                host=host,
+                port=port
+            )
+            return conn
+        except IndexError:
+            st.error("Le format de SUPABASE_URL est incorrect. Assurez-vous qu'il est au format 'postgres://user:password@host:port/dbname'.")
+            return None
     except Exception as e:
         st.error(f"Erreur de connexion à Supabase : {e}")
         return None
-
-# Tester la connexion
-conn = create_supabase_connection()
-if conn:
-    st.success("Connexion réussie à Supabase !")
-    conn.close()
-else:
-    st.error("Échec de la connexion à Supabase. Vérifiez vos paramètres.")
-
-
 # Classe pour créer un PDF
 class FacturePDF(FPDF):
     def header(self):
@@ -110,9 +115,11 @@ selected_option = st.sidebar.selectbox(
     format_func=lambda x: f"∶ {x} ∶"
 )
 
+# Onglet 1 : Créer une Facture
 if selected_option == "Créer une Facture":
     st.header("∶ Créer une Facture ∶")
     col_client, col_produits = st.columns([1, 2])
+
     with col_client:
         type_facture = st.selectbox("∶ Type de Facture ∶", ["Proforma", "Définitive"])
         client_name = st.text_input("∶ Nom du Client ∶")
@@ -128,6 +135,7 @@ if selected_option == "Créer une Facture":
                 produit["quantite"] = st.number_input("∶ Quantité ∶", min_value=1, value=1, key="quantite")
                 produit["prix_unitaire"] = st.number_input("∶ Prix Unitaire (FCFA) ∶", min_value=0.0, value=0.0, key="prix_unitaire")
                 submitted = st.form_submit_button("∶ Valider Produit ∶")
+
                 if submitted:
                     if produit["nom"] and produit["prix_unitaire"] > 0:
                         produit["montant"] = produit["quantite"] * produit["prix_unitaire"]
@@ -139,6 +147,7 @@ if selected_option == "Créer une Facture":
 
     if st.session_state.produits:
         col_details, col_actions = st.columns([2, 1])
+
         with col_details:
             st.write("∶ Détails des Produits ∶")
             df_produits = pd.DataFrame(st.session_state.produits)
@@ -147,6 +156,7 @@ if selected_option == "Créer une Facture":
             tva = st.session_state.total * 0.18  # 18%
             css = st.session_state.total * 0.01  # 1%
             total_ttc = st.session_state.total + tva + css
+
             st.write(f"∶ Total HT ∶ {st.session_state.total:.2f} FCFA")
             st.write(f"∶ TVA (18%) ∶ {tva:.2f} FCFA")
             st.write(f"∶ CSS (1%) ∶ {css:.2f} FCFA")
@@ -200,6 +210,7 @@ if selected_option == "Créer une Facture":
                     facture_data = [["Description", "Quantité", "Prix Unitaire (FCFA)", "Montant (FCFA)"]]
                     for produit in st.session_state.produits:
                         facture_data.append([produit["nom"], produit["quantite"], f"{produit['prix_unitaire']:.2f}", f"{produit['montant']:.2f}"])
+
                     facture_data.append(["", "", "Total HT", f"{st.session_state.total:.2f} FCFA"])
                     facture_data.append(["", "", "TVA (18%)", f"{tva:.2f} FCFA"])
                     facture_data.append(["", "", "CSS (1%)", f"{css:.2f} FCFA"])
@@ -215,6 +226,7 @@ if selected_option == "Créer une Facture":
                 st.session_state.total = 0
                 st.info("∶ Les données de la facture ont été réinitialisées. Vous pouvez créer une nouvelle facture. ∶")
 
+# Onglet 2 : Historique des Factures
 elif selected_option == "Historique des Factures":
     st.header("∶ Historique des Factures ∶")
 
@@ -243,12 +255,15 @@ elif selected_option == "Historique des Factures":
 
         total_pages = (len(factures) + items_per_page - 1) // items_per_page
         col_prev, col_next = st.columns([1, 1])
+
         with col_prev:
             if st.button("∶ Previous ∶") and st.session_state.page > 1:
                 st.session_state.page -= 1
+
         with col_next:
             if st.button("∶ Next ∶") and st.session_state.page < total_pages:
                 st.session_state.page += 1
+
         st.write(f"∶ Page {st.session_state.page} sur {total_pages} ∶")
 
         facture_id = st.number_input("∶ Rechercher une facture par ID ∶", min_value=1, value=1)
@@ -261,6 +276,7 @@ elif selected_option == "Historique des Factures":
                 tva = f"{facture[5]:.2f}" if facture[5] is not None else "0.00"
                 css = f"{facture[6]:.2f}" if facture[6] is not None else "0.00"
                 montant_ttc = f"{facture[7]:.2f}" if facture[7] is not None else "0.00"
+
                 st.write(f"∶ Facture trouvée ∶ Type={facture[1]}, Client={facture[2]}")
                 st.write(f"∶ Total HT ∶ {total_ht} FCFA")
                 st.write(f"∶ TVA (18%) ∶ {tva} FCFA")
@@ -269,13 +285,13 @@ elif selected_option == "Historique des Factures":
                 st.table(pd.DataFrame(produits))
             else:
                 st.warning("∶ Aucune facture correspondante ∶")
-
     else:
         st.info("∶ Aucune facture enregistrée ∶")
 
     cursor.close()
     conn.close()
 
+# Onglet 3 : Analyse des Données
 elif selected_option == "Analyse des Données":
     st.header("∶ Analyse des Données ∶")
 
@@ -292,6 +308,7 @@ elif selected_option == "Analyse des Données":
         df_ventes["Date"] = pd.to_datetime(df_ventes["Date"])
 
         col_graph1, col_graph2 = st.columns([1, 1])
+
         with col_graph1:
             grouped_by_produit = df_ventes.groupby("Produit", as_index=False).agg({"Montant (FCFA)": "sum"})
             fig = px.bar(
@@ -314,7 +331,6 @@ elif selected_option == "Analyse des Données":
                 title="∶ Évolution des ventes par produit ∶"
             )
             st.plotly_chart(fig2)
-
     else:
         st.info("∶ Aucune donnée de vente disponible ∶")
 
